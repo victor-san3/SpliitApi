@@ -1,6 +1,12 @@
+import os
+from dotenv import load_dotenv
 from spliit import Spliit
 
-client = Spliit(group_id="zwi1rHAQ-G9PWSHb4Zy7I")
+# Load environment variables from .env file
+load_dotenv()
+
+# Initialize client using SPLIIT_GROUP_ID from environment
+client = Spliit()
 
 # Get all expenses
 expenses = client.get_expenses()

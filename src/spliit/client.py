@@ -1,7 +1,8 @@
 """Spliit API client for managing shared expenses."""
 
 import json
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import requests
@@ -14,12 +15,21 @@ class Spliit:
     """Client for interacting with the Spliit API.
     
     Attributes:
-        group_id: The ID of the Spliit group to interact with
-        base_url: Base URL for the Spliit API (default: https://spliit.app/api/trpc)
+        group_id: The ID of the Spliit group. If not provided, looks for SPLIIT_GROUP_ID env var.
+        base_url: Base URL for the Spliit API. If not provided, looks for SPLIIT_BASE_URL env var 
+                 or defaults to https://spliit.app/api/trpc.
     """
     
-    group_id: str
-    base_url: str = "https://spliit.app/api/trpc"
+    group_id: Optional[str] = field(default_factory=lambda: os.getenv("SPLIIT_GROUP_ID"))
+    base_url: Optional[str] = field(default_factory=lambda: os.getenv("SPLIIT_BASE_URL", "https://spliit.app/api/trpc"))
+
+    def __post_init__(self):
+        if not self.group_id:
+            raise ValueError(
+                "group_id must be provided or set via SPLIIT_GROUP_ID environment variable"
+            )
+        if not self.base_url:
+            self.base_url = "https://spliit.app/api/trpc"
     
     def get_group(self) -> Dict:
         """Get group details including participants.
