@@ -83,10 +83,13 @@ def format_expense_payload(
     paid_by: str,
     paid_for: List[Tuple[str, int]],
     amount: int,
-    category: int
+    category: int,
+    date: str = None,
+    split_mode: str = "EVENLY",
+    is_reimbursement: bool = False,
 ) -> Dict[str, Any]:
     """Format the expense payload for the Spliit API.
-    
+
     Args:
         group_id: The ID of the group
         title: Title/description of the expense
@@ -94,7 +97,10 @@ def format_expense_payload(
         paid_for: List of tuples (participant_id, shares)
         amount: Total amount in cents
         category: Category ID from CATEGORIES
-        
+        date: Expense date in YYYY-MM-DD format (default: today's timestamp)
+        split_mode: One of EVENLY, BY_SHARES, BY_PERCENTAGE, BY_AMOUNT
+        is_reimbursement: Whether this expense is a reimbursement/settlement
+
     Returns:
         Formatted payload dictionary for the API request
     """
@@ -102,21 +108,33 @@ def format_expense_payload(
         {"participant": participant_id, "shares": shares}
         for participant_id, shares in paid_for
     ]
-    
+
+    # Convert date string to timestamp if provided
+    if date:
+        # Parse YYYY-MM-DD and convert to ISO timestamp with time 00:00:00
+        try:
+            from datetime import datetime as dt
+            date_obj = dt.strptime(date, "%Y-%m-%d")
+            expense_date = date_obj.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+        except ValueError:
+            expense_date = get_current_timestamp()
+    else:
+        expense_date = get_current_timestamp()
+
     return {
         "0": {
             "json": {
                 "groupId": group_id,
                 "expenseFormValues": {
-                    "expenseDate": get_current_timestamp(),
+                    "expenseDate": expense_date,
                     "title": title,
                     "category": category,
                     "amount": amount,
                     "paidBy": paid_by,
                     "paidFor": paid_for_format,
-                    "splitMode": "EVENLY",
+                    "splitMode": split_mode,
                     "saveDefaultSplittingOptions": False,
-                    "isReimbursement": False,
+                    "isReimbursement": is_reimbursement,
                     "documents": [],
                     "notes": "",
                 },

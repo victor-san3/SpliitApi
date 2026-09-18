@@ -31,6 +31,52 @@ class Spliit:
         if not self.base_url:
             self.base_url = "https://spliit.app/api/trpc"
     
+    def create_group(
+        self,
+        name: str,
+        participant_names: List[str],
+        currency: str = "$",
+        currency_code: Optional[str] = None,
+        information: str = "",
+    ) -> Dict:
+        """Create a new group.
+
+        Args:
+            name: Group name (2-50 chars)
+            participant_names: Names of participants to create in the group
+            currency: Currency symbol shown in the UI (e.g. "$", "R$")
+            currency_code: ISO-4217 currency code (e.g. "USD", "BRL")
+            information: Optional free-text group description
+
+        Returns:
+            Dictionary with the new group's id, e.g. {"groupId": "..."}
+        """
+        params = {"batch": "1"}
+        json_data = {
+            "0": {
+                "json": {
+                    "groupFormValues": {
+                        "name": name,
+                        "information": information,
+                        "currency": currency,
+                        "currencyCode": currency_code,
+                        "participants": [
+                            {"name": participant_name}
+                            for participant_name in participant_names
+                        ],
+                    }
+                }
+            }
+        }
+
+        response = requests.post(
+            f"{self.base_url}/groups.create",
+            params=params,
+            json=json_data
+        )
+        response.raise_for_status()
+        return response.json()[0]["result"]["data"]["json"]
+
     def get_group(self) -> Dict:
         """Get group details including participants.
         
@@ -147,31 +193,40 @@ class Spliit:
         paid_by: str,
         paid_for: List[Tuple[str, int]],
         amount: int,
-        category: int = 0
+        category: int = 0,
+        date: Optional[str] = None,
+        split_mode: str = "EVENLY",
+        is_reimbursement: bool = False,
     ) -> str:
         """Add a new expense to the group.
-        
+
         Args:
             title: Title/description of the expense
             paid_by: Participant ID who paid for the expense
             paid_for: List of tuples (participant_id, shares) for splitting
             amount: Total amount in cents
             category: Category ID from CATEGORIES (default: 0 for General)
-            
+            date: Expense date in YYYY-MM-DD format (default: today)
+            split_mode: One of EVENLY, BY_SHARES, BY_PERCENTAGE, BY_AMOUNT
+            is_reimbursement: Whether this expense is a reimbursement/settlement
+
         Returns:
             Response content from the API
         """
         params = {"batch": "1"}
-        
+
         json_data = format_expense_payload(
             self.group_id,
             title,
             paid_by,
             paid_for,
             amount,
-            category
+            category,
+            date,
+            split_mode,
+            is_reimbursement,
         )
-        
+
         response = requests.post(
             f"{self.base_url}/groups.expenses.create",
             params=params,
